@@ -67,12 +67,23 @@ export function Logo({ className, compact = false, href = '/' }: LogoProps) {
                 return
             }
 
-            // Only the first tap of a sequence navigates. The rest would each
-            // re-request the page you are already heading to, which made the
-            // count depend on how fast the server answered.
-            if (tapTimes.length === 1) {
-                router.visit(href)
+            // Only the first tap of a sequence goes anywhere. The rest would
+            // each re-request the page you are already heading to, which made
+            // the count depend on how fast the server answered.
+            if (tapTimes.length !== 1) {
+                return
             }
+
+            // Already home: scroll to the top rather than re-fetching a page
+            // the visitor is looking at. `html` carries scroll-behavior:
+            // smooth, which the reduced-motion rule already turns off.
+            if (window.location.pathname === href) {
+                window.scrollTo({ top: 0 })
+
+                return
+            }
+
+            router.visit(href)
         },
         [href],
     )

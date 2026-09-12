@@ -44,12 +44,12 @@ test.describe('the hidden entrance', () => {
         await expect(page.getByRole('heading', { level: 1 })).toContainText('What are we cooking?')
     })
 
-    test('only the first tap of a sequence navigates', async ({ page }) => {
+    test('repeated taps never re-request the page you are on', async ({ page }) => {
         // The regression this guards: Inertia's <Link> ignores
-        // preventDefault(), so every tap used to fire its own visit to '/'.
-        // Four round trips had to fit inside the window, which they do on
-        // localhost and do not on a slow phone.
-        await page.goto('/recipes')
+        // preventDefault(), so every tap fired its own visit. Four round trips
+        // had to fit inside the window — which they do on localhost and do not
+        // on a slow phone, or a cold CI runner.
+        await page.goto('/')
         await page.waitForLoadState('networkidle')
 
         let visits = 0
@@ -64,7 +64,7 @@ test.describe('the hidden entrance', () => {
         }
 
         await expect(page).toHaveURL(/\/$/)
-        expect(visits).toBe(1)
+        expect(visits).toBe(0)
     })
 
     test('taps spread out over time do not count', async ({ page }) => {
