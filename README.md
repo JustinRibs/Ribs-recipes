@@ -828,6 +828,14 @@ On the first run it copies `.env.e2e.example` to `.env.e2e` and generates an
 `APP_KEY` into that copy. `.env.e2e` is git-ignored; only the blank template is
 tracked, so a generated key can never reach a commit.
 
+The suite runs against `database/e2e.sqlite`, never the development database.
+That hangs on one detail worth knowing: `php artisan serve --env=e2e`
+configures the _artisan_ process, not the requests it serves. The PHP built-in
+server bootstraps the application again per request and Laravel forwards only
+an allow-list of variables to those workers. `APP_ENV` is on that list, so
+`playwright.config.ts` passes it through `webServer.env` — which is what makes
+the workers load `.env.e2e` at all.
+
 ### A note on environment files
 
 `.gitignore` ignores `.env*` outright and re-admits only `.env.example` and

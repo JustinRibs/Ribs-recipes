@@ -29,7 +29,10 @@ return [
         'leeway' => (int) env('CLOUDFLARE_ACCESS_LEEWAY', 30),
 
         // Environments in which the development bypass may be honoured.
-        'dev_environments' => ['local', 'development', 'testing'],
+        // "e2e" is the Playwright suite, which drives the real admin UI in a
+        // browser and so cannot present a signed Cloudflare token. Production
+        // is not on this list and never will be.
+        'dev_environments' => ['local', 'development', 'testing', 'e2e'],
 
         // Development bypass. Ignored outside the environments listed above.
         'dev_bypass' => (bool) env('ADMIN_DEV_BYPASS', false),

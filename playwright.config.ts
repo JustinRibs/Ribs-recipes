@@ -37,14 +37,23 @@ export default defineConfig({
     ],
 
     webServer: {
-        // A dedicated environment file so the suite never touches the
-        // development database, and an admin bypass that is only ever
-        // honoured because APP_ENV is local.
+        // The environment is handed over as APP_ENV, not as `artisan serve
+        // --env=e2e`. That flag configures the artisan process; the PHP
+        // built-in server it spawns bootstraps the application again on every
+        // request, and Laravel forwards only an allow-list of variables to
+        // those workers (ServeCommand::$passthroughVariables) — APP_ENV among
+        // them. With the flag alone, served requests quietly fell back to .env
+        // and the development database, which is precisely the isolation this
+        // suite exists to have.
+        //
+        // APP_ENV=e2e makes each worker load .env.e2e, which points at
+        // database/e2e.sqlite.
         //
         // tests/e2e/prepare.mjs must have run first — `npm run test:e2e` does
         // that. Playwright starts this server before any globalSetup, so the
         // environment file and the database have to exist by now.
-        command: `php artisan serve --port=${PORT} --env=e2e`,
+        command: `php artisan serve --port=${PORT}`,
+        env: { APP_ENV: 'e2e' },
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
