@@ -44,6 +44,29 @@ test.describe('the hidden entrance', () => {
         await expect(page.getByRole('heading', { level: 1 })).toContainText('What are we cooking?')
     })
 
+    test('only the first tap of a sequence navigates', async ({ page }) => {
+        // The regression this guards: Inertia's <Link> ignores
+        // preventDefault(), so every tap used to fire its own visit to '/'.
+        // Four round trips had to fit inside the window, which they do on
+        // localhost and do not on a slow phone.
+        await page.goto('/recipes')
+        await page.waitForLoadState('networkidle')
+
+        let visits = 0
+        page.on('request', (request) => {
+            if (request.headers()['x-inertia']) visits++
+        })
+
+        const logo = page.getByRole('banner').getByRole('link', { name: 'Ribs Recipes — home' })
+
+        for (let i = 0; i < 3; i++) {
+            await logo.click()
+        }
+
+        await expect(page).toHaveURL(/\/$/)
+        expect(visits).toBe(1)
+    })
+
     test('taps spread out over time do not count', async ({ page }) => {
         await page.goto('/')
 

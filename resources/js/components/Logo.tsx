@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react'
+import { router } from '@inertiajs/react'
 import { useCallback } from 'react'
 import { cn } from '@/lib/cn'
 
@@ -44,32 +44,46 @@ interface LogoProps {
  * mechanism is hidden from assistive technology.
  */
 export function Logo({ className, compact = false, href = '/' }: LogoProps) {
-    const onClick = useCallback((event: React.MouseEvent) => {
-        const now = Date.now()
-        const previous = tapTimes.at(-1)
+    const onClick = useCallback(
+        (event: React.MouseEvent) => {
+            // Ctrl/Cmd-click, middle-click and the rest belong to the browser:
+            // opening the logo in a new tab should still work.
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return
+            }
 
-        // Too long since the last one, and this is the start of a new sequence.
-        tapTimes = previous !== undefined && now - previous > TAP_GAP_MS ? [now] : [...tapTimes, now]
-
-        if (tapTimes.length >= TAPS_REQUIRED) {
-            tapTimes = []
             event.preventDefault()
-            router.visit('/admin')
 
-            return
-        }
+            const now = Date.now()
+            const previous = tapTimes.at(-1)
 
-        // Only the first tap of a sequence navigates. The second, third and
-        // fourth would each re-request the page you are already on, and
-        // letting them through made the count depend on how quickly the
-        // network answered — which is why this did not work on a slow phone.
-        if (tapTimes.length > 1) {
-            event.preventDefault()
-        }
-    }, [])
+            // Too long since the last one, and this is a new sequence.
+            tapTimes = previous !== undefined && now - previous > TAP_GAP_MS ? [now] : [...tapTimes, now]
+
+            if (tapTimes.length >= TAPS_REQUIRED) {
+                tapTimes = []
+                router.visit('/admin')
+
+                return
+            }
+
+            // Only the first tap of a sequence navigates. The rest would each
+            // re-request the page you are already heading to, which made the
+            // count depend on how fast the server answered.
+            if (tapTimes.length === 1) {
+                router.visit(href)
+            }
+        },
+        [href],
+    )
 
     return (
-        <Link
+        // A plain anchor, not Inertia's <Link>: Link runs its own click handler
+        // after this one and navigates whether or not the event was
+        // default-prevented, so there would be no way to swallow the taps in
+        // the middle of a sequence. The href is real, so right-click, middle
+        // click and "open in new tab" all behave normally.
+        <a
             href={href}
             onClick={onClick}
             aria-label="Ribs Recipes — home"
@@ -99,7 +113,7 @@ export function Logo({ className, compact = false, href = '/' }: LogoProps) {
                     </span>
                 </span>
             )}
-        </Link>
+        </a>
     )
 }
 
