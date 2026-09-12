@@ -1,0 +1,48 @@
+# Everything the image builds for itself, or must never contain.
+
+.git
+.github
+.gitignore
+.gitattributes
+.editorconfig
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Installed by the build stages
+node_modules
+vendor
+
+# Built by the assets stage
+public/build
+public/hot
+public/storage
+
+# Local state
+database/*.sqlite
+database/*.sqlite-*
+storage/app/public/*
+storage/app/private/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+bootstrap/cache/*
+
+# Development tooling and output
+tests
+backups
+playwright.config.ts
+playwright-report
+test-results
+.playwright-mcp
+vitest.config.ts
+phpunit.xml
+.phpunit.cache
+.phpunit.result.cache
+.idea
+.vscode
+*.md
+!README.md

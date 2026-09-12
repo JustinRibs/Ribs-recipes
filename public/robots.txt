@@ -1,0 +1,11 @@
+# The recipe collection is meant to be found. The administration area is not,
+# and the application also sends X-Robots-Tag: noindex on every /admin
+# response — this file is the polite request, that header is the instruction.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /search/suggest
+
+Sitemap: https://recipes.ribarichh.com/sitemap.xml

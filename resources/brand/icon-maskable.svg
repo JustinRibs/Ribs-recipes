@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Maskable variant: the same artwork, drawn square and edge to edge so
+    the platform can crop it to a circle, squircle or rounded square with
+    no letterboxing. Everything that matters — the bell tower, the roofs
+    and the checker — sits inside the central 80% safe zone; only the tip
+    of the olive branch is allowed to run off the corner.
+  -->
+
+  <!--
+    The Ribs Recipes mark.
+
+    A Dalmatian village on the rocks above the Adriatic, framed by an olive
+    branch, with the Croatian checker as a small keystone in the water. Drawn
+    with big, flat shapes so it still reads at 32px in a browser tab.
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBFAF7"/>
+      <stop offset="0.62" stop-color="#EAF1F7"/>
+      <stop offset="1" stop-color="#DCE8F1"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4E90BB"/>
+      <stop offset="1" stop-color="#2F6F9F"/>
+    </linearGradient>
+    <clipPath id="frame">
+      <rect x="0" y="0" width="512" height="512"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+
+    <!-- Distant headland -->
+    <path d="M0 324c46-9 84-34 132-34 44 0 66 22 106 22 46 0 74-30 128-30 50 0 86 26 146 26v66H0z"
+          fill="#2F6F9F" opacity="0.14"/>
+
+    <!-- Olive branch -->
+    <g stroke-linecap="round">
+      <path d="M40 128c66 6 122 34 168 84" stroke="#5E7150" stroke-width="14" fill="none"/>
+      <g fill="#6B7F5A">
+        <ellipse cx="92" cy="102" rx="44" ry="20" transform="rotate(-24 92 102)"/>
+        <ellipse cx="158" cy="140" rx="42" ry="19" transform="rotate(-10 158 140)"/>
+        <ellipse cx="128" cy="176" rx="38" ry="18" transform="rotate(22 128 176)"/>
+      </g>
+      <circle cx="196" cy="184" r="25" fill="#57683F"/>
+      <circle cx="214" cy="222" r="20" fill="#57683F" opacity="0.9"/>
+    </g>
+
+    <!-- Rocky shore -->
+    <path d="M188 352l16-28 40-10 26-16 52 6 44-14 48 18 56-6v52H188z" fill="#D9CFBD"/>
+    <path d="M188 352l16-28 40-10 26-16 52 6 44-14 48 18 56-6v18c-58 8-96-6-142 0-52 7-84 22-140 18z"
+          fill="#C2B49C" opacity="0.7"/>
+
+    <!-- Village -->
+    <g>
+      <!-- Left house -->
+      <path d="M214 350v-70h68v70z" fill="#E8E2D6"/>
+      <path d="M206 282l42-34 42 34z" fill="#C4552F"/>
+      <!-- Bell tower -->
+      <path d="M300 350V168h46v182z" fill="#EFEAE0"/>
+      <path d="M292 168l31-30 31 30z" fill="#C4552F"/>
+      <rect x="318" y="108" width="10" height="32" rx="4" fill="#12263F"/>
+      <rect x="308" y="120" width="30" height="10" rx="4" fill="#12263F"/>
+      <rect x="312" y="196" width="22" height="34" rx="11" fill="#12263F" opacity="0.55"/>
+      <!-- Right house -->
+      <path d="M364 350v-58h72v58z" fill="#E3DCCE"/>
+      <path d="M356 292l44-32 44 32z" fill="#B44A28"/>
+      <!-- Cypresses -->
+      <path d="M452 350c-14 0-20-16-20-38s6-46 20-46 20 24 20 46-6 38-20 38z" fill="#3F5136"/>
+      <path d="M488 350c-11 0-16-12-16-29s5-35 16-35 16 18 16 35-5 29-16 29z" fill="#4A5E3E"/>
+    </g>
+
+    <!-- Sea -->
+    <path d="M0 352c58 0 58 22 116 22s58-22 116-22 58 22 116 22 62-21 164-22v160H0z" fill="url(#sea)"/>
+    <path d="M0 352c58 0 58 22 116 22s58-22 116-22 58 22 116 22 62-21 164-22v26c-102 1-108 22-164 22s-58-22-116-22-58 22-116 22-58-22-116-22z"
+          fill="#FBFAF7" opacity="0.22"/>
+    <path d="M74 432h84M300 452h96M186 470h74" stroke="#FBFAF7" stroke-width="9" stroke-linecap="round" opacity="0.35"/>
+
+    <!-- Croatian checker keystone -->
+    <g fill="#FBFAF7">
+      <rect x="216" y="404" width="28" height="28"/>
+      <rect x="268" y="404" width="28" height="28"/>
+      <rect x="242" y="430" width="28" height="28"/>
+    </g>
+    <g fill="#B3252B">
+      <rect x="216" y="404" width="28" height="28"/>
+      <rect x="268" y="404" width="28" height="28"/>
+      <rect x="242" y="430" width="28" height="28"/>
+    </g>
+  </g>
+
+</svg>

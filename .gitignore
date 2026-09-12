@@ -1,0 +1,36 @@
+*.log
+.DS_Store
+# Every environment file is ignored, and the templates are the exceptions.
+# An allow-list here is how a generated key reached a public repository once
+# already: .env.e2e was not on the list, so it was simply tracked.
+.env*
+!.env.example
+!.env.*.example
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# End-to-end test artefacts
+/database/e2e.sqlite*
+/test-results
+/playwright-report
+/.playwright-mcp

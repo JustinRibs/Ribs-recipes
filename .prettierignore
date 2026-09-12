@@ -1,0 +1,14 @@
+public/build
+public/storage
+public/sw.js
+vendor
+node_modules
+storage
+database/*.sqlite*
+test-results
+playwright-report
+.playwright-mcp
+composer.lock
+package-lock.json
+CHANGELOG.md
+composer.json

@@ -1,0 +1,143 @@
+###############################################################################
+# Ribs Recipes — production stack
+#
+#   Internet → Cloudflare → Cloudflare Tunnel → Traefik → this container
+#
+# Nothing here publishes a host port. The only way in is through the existing
+# Traefik instance on its external network, which is exactly the boundary the
+# Cloudflare Tunnel already terminates at.
+#
+#   cp .env.example .env      # fill it in (see the README)
+#   docker compose up -d --build
+###############################################################################
+
+services:
+  app:
+    # Pulled from Docker Hub when RIBS_IMAGE names a published tag (see
+    # .github/workflows/publish.yml), and built from this checkout
+    # otherwise. `docker compose up -d --build` always builds locally.
+    image: ${RIBS_IMAGE:-ribs-recipes:latest}
+    build:
+      context: .
+      target: runtime
+    container_name: ribs-recipes
+    restart: unless-stopped
+
+    env_file: .env
+    environment:
+      # The SQLite file lives on the persistent volume, not in the image.
+      DB_DATABASE: /app/storage/database/database.sqlite
+
+    volumes:
+      # One volume for everything that must outlive a rebuild: the
+      # database, uploaded photos, and the logs.
+      - ribs-storage:/app/storage
+
+    networks:
+      - traefik
+      - internal
+
+    labels:
+      traefik.enable: 'true'
+      # Which of Traefik's networks to route over, when it is attached to
+      # several. Matches the external network named at the bottom.
+      traefik.docker.network: ${TRAEFIK_NETWORK:-traefik}
+
+      traefik.http.routers.ribs-recipes.rule: Host(`${APP_HOST:-recipes.ribarichh.com}`)
+      traefik.http.routers.ribs-recipes.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
+      traefik.http.routers.ribs-recipes.service: ribs-recipes
+
+      # TLS is off by default: the Cloudflare Tunnel terminates HTTPS and
+      # speaks plain HTTP to Traefik on the same host. Set
+      # TRAEFIK_TLS=true (and TRAEFIK_ENTRYPOINT=websecure) if Traefik
+      # holds the certificate instead.
+      traefik.http.routers.ribs-recipes.tls: ${TRAEFIK_TLS:-false}
+      traefik.http.routers.ribs-recipes.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-}
+
+      traefik.http.services.ribs-recipes.loadbalancer.server.port: '80'
+      traefik.http.services.ribs-recipes.loadbalancer.healthcheck.path: /up
+      traefik.http.services.ribs-recipes.loadbalancer.healthcheck.interval: 30s
+
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', '--output', '/dev/null', 'http://127.0.0.1/up']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+    # A recipe site on a home server does not need much; the cap is here so
+    # a runaway image conversion cannot take the whole machine with it.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  # One scheduled job: sweeping up photos uploaded into an abandoned editor.
+  # If this container is not running, nothing breaks.
+  scheduler:
+    # Deliberately the same image as the app, so the two can never drift.
+    image: ${RIBS_IMAGE:-ribs-recipes:latest}
+    build:
+      context: .
+      target: runtime
+    container_name: ribs-recipes-scheduler
+    restart: unless-stopped
+
+    env_file: .env
+    environment:
+      DB_DATABASE: /app/storage/database/database.sqlite
+      # The app container already migrated and seeded on boot.
+      RUN_SEEDERS: 'false'
+
+    volumes:
+      - ribs-storage:/app/storage
+
+    networks:
+      - internal
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    command: ['php', 'artisan', 'schedule:work']
+
+    healthcheck:
+      test: ['CMD', 'php', 'artisan', 'inspire']
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+
+volumes:
+  # Holds the SQLite database, every uploaded photo, and the logs.
+  # scripts/backup.sh is what protects it.
+  ribs-storage:
+    name: ribs-recipes-storage
+
+networks:
+  # The server's existing Traefik network. This stack joins it; it never
+  # creates or configures Traefik itself.
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik}
+
+  # Private link between the app and the scheduler. Nothing else reaches it.
+  internal:
+    driver: bridge

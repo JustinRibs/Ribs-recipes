@@ -1,0 +1,40 @@
+{
+	# TLS is terminated by Cloudflare and the connection from the tunnel to
+	# Traefik stays inside the host, so this server speaks plain HTTP. Traefik
+	# is the only thing that can reach it — no host port is published.
+	auto_https off
+
+	# Trust the proxy chain for client IP and scheme. Traefik is the only
+	# thing that can reach this container; Laravel checks the headers again.
+	servers {
+		trusted_proxies static private_ranges
+	}
+
+	frankenphp
+	order php_server before file_server
+}
+
+:80 {
+	root * /app/public
+
+	encode zstd gzip
+
+	# Hashed build assets and processed images never change under their name.
+	@immutable path /build/* /icons/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	@media path /storage/media/*
+	header @media Cache-Control "public, max-age=2592000"
+
+	# The admin's no-store policy is set by the application itself, so it
+	# holds in development too and there is only ever one such header.
+
+	header {
+		-Server
+		-X-Powered-By
+	}
+
+	php_server {
+		index index.php
+	}
+}

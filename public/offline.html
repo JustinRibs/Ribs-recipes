@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>Offline — Ribs Recipes</title>
+        <meta name="theme-color" content="#FBFAF7" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0D1015" media="(prefers-color-scheme: dark)" />
+        <style>
+            /*
+         * Standalone by design: this page has to render when nothing else can
+         * be fetched, so it carries no external stylesheet, script or font.
+         */
+            :root {
+                color-scheme: light;
+                --canvas: #fbfaf7;
+                --ink: #141a22;
+                --muted: #5c6674;
+                --brand: #12263f;
+                --croatia: #b3252b;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    color-scheme: dark;
+                    --canvas: #0d1015;
+                    --ink: #edeff3;
+                    --muted: #a0a9b6;
+                    --brand: #e7ecf3;
+                    --croatia: #e8676c;
+                }
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100dvh;
+                display: grid;
+                place-items: center;
+                padding: 2rem 1.5rem;
+                background: var(--canvas);
+                color: var(--ink);
+                font-family:
+                    ui-sans-serif,
+                    system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    Roboto,
+                    sans-serif;
+                -webkit-font-smoothing: antialiased;
+                text-align: center;
+            }
+
+            .checker {
+                width: 24px;
+                height: 8px;
+                margin: 0 auto 1.75rem;
+                background-image:
+                    linear-gradient(
+                        45deg,
+                        var(--croatia) 25%,
+                        transparent 25%,
+                        transparent 75%,
+                        var(--croatia) 75%
+                    ),
+                    linear-gradient(
+                        45deg,
+                        var(--croatia) 25%,
+                        transparent 25%,
+                        transparent 75%,
+                        var(--croatia) 75%
+                    );
+                background-size: 8px 8px;
+                background-position:
+                    0 0,
+                    4px 4px;
+            }
+
+            h1 {
+                margin: 0 0 0.75rem;
+                font-family: ui-serif, Georgia, 'Times New Roman', serif;
+                font-size: clamp(2rem, 8vw, 2.75rem);
+                font-weight: 400;
+                letter-spacing: -0.02em;
+                line-height: 1.05;
+            }
+
+            p {
+                margin: 0 auto 2rem;
+                max-width: 30ch;
+                color: var(--muted);
+                font-size: 1.02rem;
+                line-height: 1.6;
+            }
+
+            button {
+                min-height: 48px;
+                padding: 0 1.75rem;
+                border: 0;
+                border-radius: 999px;
+                background: var(--brand);
+                color: var(--canvas);
+                font: inherit;
+                font-weight: 500;
+                cursor: pointer;
+            }
+
+            button:active {
+                transform: scale(0.98);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <div class="checker" aria-hidden="true"></div>
+            <h1>No connection</h1>
+            <p>
+                Recipes you have already opened are still available — this one has not been saved to the
+                device yet.
+            </p>
+            <button type="button" onclick="location.reload()">Try again</button>
+        </main>
+    </body>
+</html>

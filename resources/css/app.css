@@ -1,0 +1,314 @@
+@import 'tailwindcss';
+
+@source '../js/**/*.{ts,tsx}';
+@source '../views/**/*.blade.php';
+
+/*
+ * Dark mode is driven by a `data-theme` attribute on <html>, written by a tiny
+ * inline script before first paint (see resources/views/app.blade.php). The
+ * three states are light, dark and system — "system" resolves to one of the
+ * other two at runtime and follows the OS live.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * A phone held sideways has about 390px of height, most of it spoken for by
+ * the browser's own chrome. `short:` trims vertical rhythm where that matters
+ * — chiefly cooking mode, which someone may well turn sideways to prop the
+ * phone against something.
+ */
+@custom-variant short (@media (max-height: 520px));
+
+/* ---------------------------------------------------------------------------
+ * Palette
+ *
+ * Warm white paper, a deep Adriatic navy for ink and brand, sea blue for
+ * interaction, and a restrained Croatian red reserved for the checker motif
+ * and the "featured" mark. Dark mode is designed rather than inverted: the
+ * ground is a cool near-black, surfaces lift with light instead of borders,
+ * and photography keeps its full contrast.
+ * ------------------------------------------------------------------------- */
+
+:root {
+    color-scheme: light;
+
+    --c-canvas: #fbfaf7;
+    --c-surface: #ffffff;
+    --c-surface-2: #f5f3ee;
+    --c-surface-3: #eceae3;
+
+    --c-ink: #141a22;
+    --c-ink-muted: #5c6674;
+    --c-ink-faint: #8b94a1;
+    --c-ink-inverse: #fbfaf7;
+
+    --c-line: rgb(20 26 34 / 0.1);
+    --c-line-strong: rgb(20 26 34 / 0.18);
+
+    --c-brand: #12263f;
+    --c-brand-soft: #1d3a5c;
+    --c-adriatic: #2f6f9f;
+    --c-adriatic-soft: #e8f1f7;
+    --c-croatia: #b3252b;
+    --c-croatia-soft: #fbeaea;
+    --c-olive: #6b7f5a;
+
+    --c-shadow: 220 35% 12%;
+
+    --shadow-card: 0 1px 2px hsl(var(--c-shadow) / 0.04), 0 8px 24px -12px hsl(var(--c-shadow) / 0.14);
+    --shadow-lifted: 0 2px 4px hsl(var(--c-shadow) / 0.05), 0 18px 40px -18px hsl(var(--c-shadow) / 0.24);
+    --shadow-overlay: 0 24px 70px -20px hsl(var(--c-shadow) / 0.38);
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+
+    --c-canvas: #0d1015;
+    --c-surface: #161b22;
+    --c-surface-2: #1d232c;
+    --c-surface-3: #262d38;
+
+    --c-ink: #edeff3;
+    --c-ink-muted: #a0a9b6;
+    --c-ink-faint: #767f8c;
+    --c-ink-inverse: #0d1015;
+
+    --c-line: rgb(255 255 255 / 0.09);
+    --c-line-strong: rgb(255 255 255 / 0.16);
+
+    --c-brand: #e7ecf3;
+    --c-brand-soft: #c3cede;
+    --c-adriatic: #79b8e2;
+    --c-adriatic-soft: #17293a;
+    --c-croatia: #e8676c;
+    --c-croatia-soft: #2d181a;
+    --c-olive: #9cb188;
+
+    --c-shadow: 220 60% 2%;
+
+    --shadow-card: 0 1px 2px hsl(var(--c-shadow) / 0.5), 0 8px 24px -14px hsl(var(--c-shadow) / 0.7);
+    --shadow-lifted: 0 2px 6px hsl(var(--c-shadow) / 0.55), 0 20px 44px -20px hsl(var(--c-shadow) / 0.8);
+    --shadow-overlay: 0 28px 80px -24px hsl(var(--c-shadow) / 0.9);
+}
+
+@theme {
+    --color-canvas: var(--c-canvas);
+    --color-surface: var(--c-surface);
+    --color-surface-2: var(--c-surface-2);
+    --color-surface-3: var(--c-surface-3);
+
+    --color-ink: var(--c-ink);
+    --color-ink-muted: var(--c-ink-muted);
+    --color-ink-faint: var(--c-ink-faint);
+    --color-ink-inverse: var(--c-ink-inverse);
+
+    --color-line: var(--c-line);
+    --color-line-strong: var(--c-line-strong);
+
+    --color-brand: var(--c-brand);
+    --color-brand-soft: var(--c-brand-soft);
+    --color-adriatic: var(--c-adriatic);
+    --color-adriatic-soft: var(--c-adriatic-soft);
+    --color-croatia: var(--c-croatia);
+    --color-croatia-soft: var(--c-croatia-soft);
+    --color-olive: var(--c-olive);
+
+    --font-sans:
+        var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+        Arial, sans-serif;
+    --font-display: var(--font-instrument-serif), ui-serif, Georgia, 'Times New Roman', serif;
+
+    --radius-card: 1.25rem;
+    --radius-panel: 1rem;
+
+    --text-display: 3.25rem;
+    --text-display--line-height: 1.02;
+    --text-display--letter-spacing: -0.022em;
+
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --shadow-card: var(--shadow-card);
+    --shadow-lifted: var(--shadow-lifted);
+    --shadow-overlay: var(--shadow-overlay);
+}
+
+/* ---------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------- */
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
+        /* Sticky headers and in-page anchors should not hide under the bar. */
+        scroll-padding-top: 5.5rem;
+    }
+
+    body {
+        background-color: var(--color-canvas);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        font-synthesis-weight: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        /* Nothing in this design is ever wider than the viewport. */
+        overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+
+    /* A single, consistent focus ring everywhere, keyboard-only. */
+    :focus-visible {
+        outline: 2px solid var(--color-adriatic);
+        outline-offset: 2px;
+        border-radius: 0.25rem;
+    }
+
+    /* iOS zooms the page when a focused input is under 16px. */
+    input,
+    select,
+    textarea {
+        font-size: max(16px, 1rem);
+    }
+
+    ::selection {
+        background-color: var(--color-adriatic);
+        color: white;
+    }
+
+    [hidden] {
+        display: none !important;
+    }
+}
+
+@layer components {
+    /*
+     * The Croatian nod: a 3×3 red-and-white checker, used only as a small
+     * brand detail — in the logo lockup, as a divider ornament, and nowhere
+     * near a card background.
+     */
+    .checker {
+        --checker-size: 4px;
+        background-image:
+            linear-gradient(
+                45deg,
+                var(--color-croatia) 25%,
+                transparent 25%,
+                transparent 75%,
+                var(--color-croatia) 75%
+            ),
+            linear-gradient(
+                45deg,
+                var(--color-croatia) 25%,
+                transparent 25%,
+                transparent 75%,
+                var(--color-croatia) 75%
+            );
+        background-size: calc(var(--checker-size) * 2) calc(var(--checker-size) * 2);
+        background-position:
+            0 0,
+            var(--checker-size) var(--checker-size);
+    }
+
+    /* Horizontal rails: snap points, edge-to-edge on phones, no scrollbar. */
+    .rail {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .rail > * {
+        scroll-snap-align: start;
+    }
+
+    /* Skeletons: a slow, low-contrast sweep rather than a pulsing block. */
+    .skeleton {
+        background-image: linear-gradient(
+            90deg,
+            var(--color-surface-2) 0%,
+            var(--color-surface-3) 50%,
+            var(--color-surface-2) 100%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-sweep 1.4s var(--ease-out-soft) infinite;
+    }
+
+    @keyframes skeleton-sweep {
+        to {
+            background-position: -200% 0;
+        }
+    }
+}
+
+@layer utilities {
+    .safe-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Bottom-anchored bars must clear the iOS home indicator and Safari's
+       collapsing chrome without leaving a gap on other devices. */
+    .safe-dock {
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    }
+
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    /* Fluid gutters that stay comfortable from 320px to ultrawide. */
+    .gutter {
+        padding-inline: clamp(1rem, 4vw, 2.5rem);
+    }
+
+    .shell {
+        margin-inline: auto;
+        width: 100%;
+        max-width: 78rem;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion
+ *
+ * Everything is fast and understated, and everything is switched off for
+ * visitors who ask for reduced motion.
+ * ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}
