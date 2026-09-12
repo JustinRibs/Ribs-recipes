@@ -3,9 +3,12 @@ name: CI
 # Runs on every push and pull request. The publish workflow waits for this to
 # pass before it builds an image, so nothing broken reaches Docker Hub.
 
+# No `push` trigger for main: publish.yml calls this workflow for main, and
+# running both produced a duplicate run that the shared concurrency group
+# cancelled a second later. Pushes to any other branch still run it directly.
 on:
   push:
-    branches: [main]
+    branches-ignore: [main]
   pull_request:
   workflow_call:
 
@@ -19,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -30,7 +33,7 @@ jobs:
           tools: composer:v2
 
       - name: Cache Composer packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/composer/files
           key: composer-${{ hashFiles('composer.lock') }}
@@ -58,9 +61,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -88,7 +91,7 @@ jobs:
     needs: [php, frontend]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -97,7 +100,7 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -105,21 +108,20 @@ jobs:
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: npm ci --no-audit --no-fund
 
-      # global-setup.ts builds .env.e2e from its own template, but the base
-      # environment and the public/storage symlink still have to exist for the
-      # served application to find its uploaded photos.
+      # `npm run test:e2e` runs tests/e2e/prepare.mjs first, which builds
+      # .env.e2e, seeds its own database and links public/storage. A base .env
+      # still has to exist for any artisan call that does not pass --env=e2e.
       - name: Prepare the environment
         run: |
           cp .env.example .env
           php artisan key:generate
-          php artisan storage:link
 
       # The suite serves the real application, so it needs real assets.
       - run: npm run build
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('package-lock.json') }}
@@ -130,7 +132,7 @@ jobs:
 
       - run: npm run test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report

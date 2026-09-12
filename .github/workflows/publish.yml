@@ -34,6 +34,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Without credentials there is nowhere to push, so the build is skipped with
+  # a notice rather than failing red on every commit. Secrets cannot be read in
+  # a job-level `if`, which is why this is a job of its own.
+  guard:
+    name: Check credentials
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$USERNAME" ] && [ -n "$TOKEN" ]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo "Docker Hub credentials are present."
+          else
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo "::notice title=Docker Hub not configured::Add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN under Settings → Secrets and variables → Actions to start publishing images."
+          fi
+
   # A tag build is a deliberate release of an already-tested commit; a push
   # to main has to earn its image.
   test:
@@ -43,13 +65,16 @@ jobs:
   publish:
     name: Build and push
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [guard, test]
     # `needs` on a skipped job would skip this one too, so tag builds are
     # let through explicitly.
-    if: always() && (needs.test.result == 'success' || startsWith(github.ref, 'refs/tags/'))
+    if: >-
+      always()
+      && needs.guard.outputs.configured == 'true'
+      && (needs.test.result == 'success' || startsWith(github.ref, 'refs/tags/'))
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Work out the image name
         id: image
@@ -64,17 +89,17 @@ jobs:
           echo "Publishing to ${REPOSITORY}"
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Work out tags and labels
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
@@ -88,7 +113,7 @@ jobs:
             org.opencontainers.image.description=A self-hosted recipe collection
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: runtime

@@ -11,7 +11,6 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`
 
 export default defineConfig({
     testDir: './tests/e2e',
-    globalSetup: './tests/e2e/global-setup.ts',
     fullyParallel: false,
     workers: 1,
     forbidOnly: Boolean(process.env.CI),
@@ -41,11 +40,17 @@ export default defineConfig({
         // A dedicated environment file so the suite never touches the
         // development database, and an admin bypass that is only ever
         // honoured because APP_ENV is local.
+        //
+        // tests/e2e/prepare.mjs must have run first — `npm run test:e2e` does
+        // that. Playwright starts this server before any globalSetup, so the
+        // environment file and the database have to exist by now.
         command: `php artisan serve --port=${PORT} --env=e2e`,
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 60_000,
-        stdout: 'ignore',
+        timeout: 120_000,
+        // Piped, not ignored: when the server refuses to boot, its output is
+        // the only thing that explains why.
+        stdout: 'pipe',
         stderr: 'pipe',
     },
 })
