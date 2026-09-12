@@ -2,9 +2,17 @@ import { Link, router } from '@inertiajs/react'
 import { useCallback } from 'react'
 import { cn } from '@/lib/cn'
 
-/** Taps required, and the window they must land in. */
+/**
+ * Taps required, and the longest gap allowed *between* consecutive taps.
+ *
+ * A gap threshold rather than one window around all four: a window means the
+ * whole sequence has to finish inside it, which a slow phone — or a slow
+ * connection — can easily miss through no fault of the person tapping. A
+ * deliberate quadruple-tap has gaps of a few hundred milliseconds; coming back
+ * to the logo later has gaps of seconds. 800ms separates those cleanly.
+ */
 const TAPS_REQUIRED = 4
-const TAP_WINDOW_MS = 1600
+const TAP_GAP_MS = 800
 
 /**
  * Tap times live at module scope rather than in a ref.
@@ -26,26 +34,38 @@ interface LogoProps {
 /**
  * The Ribs Recipes lockup, and the way into the admin.
  *
- * Four taps on the logo inside a short window navigate to /admin. This is a
- * convenience, not a security control — Cloudflare Access is the actual
- * boundary, and /admin is just as protected whether you arrive by tapping,
- * typing the URL or guessing it. It exists only so the public site does not
- * carry a visible "Admin" link.
+ * Four taps in quick succession navigate to /admin. This is a convenience,
+ * not a security control — Cloudflare Access is the actual boundary, and
+ * /admin is just as protected whether you arrive by tapping, typing the URL or
+ * guessing it. It exists only so the public site does not carry a visible
+ * "Admin" link.
  *
- * A single tap still goes home, which is what the logo is for. The counter is
- * only consulted on the fourth rapid tap, so ordinary use is unaffected, and
- * the whole mechanism is hidden from assistive technology.
+ * A single tap still goes home, which is what the logo is for, and the whole
+ * mechanism is hidden from assistive technology.
  */
 export function Logo({ className, compact = false, href = '/' }: LogoProps) {
     const onClick = useCallback((event: React.MouseEvent) => {
         const now = Date.now()
-        tapTimes = [...tapTimes.filter((time) => now - time < TAP_WINDOW_MS), now]
+        const previous = tapTimes.at(-1)
 
-        if (tapTimes.length < TAPS_REQUIRED) return
+        // Too long since the last one, and this is the start of a new sequence.
+        tapTimes = previous !== undefined && now - previous > TAP_GAP_MS ? [now] : [...tapTimes, now]
 
-        tapTimes = []
-        event.preventDefault()
-        router.visit('/admin')
+        if (tapTimes.length >= TAPS_REQUIRED) {
+            tapTimes = []
+            event.preventDefault()
+            router.visit('/admin')
+
+            return
+        }
+
+        // Only the first tap of a sequence navigates. The second, third and
+        // fourth would each re-request the page you are already on, and
+        // letting them through made the count depend on how quickly the
+        // network answered — which is why this did not work on a slow phone.
+        if (tapTimes.length > 1) {
+            event.preventDefault()
+        }
     }, [])
 
     return (

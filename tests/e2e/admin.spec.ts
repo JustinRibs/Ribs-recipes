@@ -21,9 +21,12 @@ const unique = (label: string, project: string) => `${label} ${project} ${Date.n
 test.describe('the hidden entrance', () => {
     test('four taps on the logo opens the admin', async ({ page }) => {
         await page.goto('/')
+        await page.waitForLoadState('networkidle')
 
         const logo = page.getByRole('banner').getByRole('link', { name: 'Ribs Recipes — home' })
 
+        // Only the first of these navigates; the rest are suppressed, which is
+        // what keeps the count independent of how fast the server answers.
         for (let i = 0; i < 4; i++) {
             await logo.click()
         }
@@ -46,9 +49,11 @@ test.describe('the hidden entrance', () => {
 
         const logo = page.getByRole('banner').getByRole('link', { name: 'Ribs Recipes — home' })
 
+        // Comfortably past the 800ms gap threshold, so each tap starts a new
+        // sequence rather than continuing the last.
         for (let i = 0; i < 3; i++) {
             await logo.click()
-            await page.waitForTimeout(700)
+            await page.waitForTimeout(1500)
         }
 
         await logo.click()
