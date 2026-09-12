@@ -46,8 +46,11 @@ export default tseslint.config(
         },
     },
 
+    // Everything that runs in Node rather than the browser: config files, the
+    // Playwright specs, and the setup scripts. Matched by extension as well as
+    // by path, so a new .mjs helper is covered without editing this list.
     {
-        files: ['*.config.{ts,js}', 'tests/e2e/**/*.ts', 'vitest.config.ts'],
+        files: ['**/*.{mjs,cjs}', '*.config.{ts,js}', 'tests/e2e/**/*.{ts,js,mjs}'],
         languageOptions: {
             globals: { ...globals.node },
         },
