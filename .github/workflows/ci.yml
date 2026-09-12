@@ -38,6 +38,15 @@ jobs:
 
       - run: composer install --prefer-dist --no-interaction --no-progress
 
+      # .env is git-ignored, as it must be, so the runner makes its own from
+      # the template. The key is generated per run rather than committed
+      # anywhere: a fixed test key in phpunit.xml would be a tracked secret,
+      # which is exactly the habit this repository has stopped.
+      - name: Prepare the environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
       - name: Check code style
         run: ./vendor/bin/pint --test
 
@@ -95,6 +104,15 @@ jobs:
 
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: npm ci --no-audit --no-fund
+
+      # global-setup.ts builds .env.e2e from its own template, but the base
+      # environment and the public/storage symlink still have to exist for the
+      # served application to find its uploaded photos.
+      - name: Prepare the environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan storage:link
 
       # The suite serves the real application, so it needs real assets.
       - run: npm run build
