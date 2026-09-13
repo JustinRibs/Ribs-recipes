@@ -48,13 +48,32 @@ jobs:
           USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          if [ -n "$USERNAME" ] && [ -n "$TOKEN" ]; then
-            echo 'configured=true' >> "$GITHUB_OUTPUT"
-            echo "Docker Hub credentials are present."
-          else
+          if [ -z "$USERNAME" ] || [ -z "$TOKEN" ]; then
             echo 'configured=false' >> "$GITHUB_OUTPUT"
             echo "::notice title=Docker Hub not configured::Add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN under Settings → Secrets and variables → Actions to start publishing images."
+            exit 0
           fi
+
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
+          echo "Docker Hub credentials are present."
+
+          # Report formatting problems without ever echoing a value. Docker Hub
+          # answers a credential containing whitespace with "malformed HTTP
+          # Authorization header", which says nothing about the actual cause and
+          # is miserable to diagnose from the outside.
+          if [ "$USERNAME" != "$(printf '%s' "$USERNAME" | tr -d '[:space:]')" ]; then
+            echo "::warning title=DOCKERHUB_USERNAME contains whitespace::A space or newline was pasted into the secret. It is trimmed before use, but the secret is worth re-pasting."
+          fi
+
+          if [ "$TOKEN" != "$(printf '%s' "$TOKEN" | tr -d '[:space:]')" ]; then
+            echo "::warning title=DOCKERHUB_TOKEN contains whitespace::A space or newline was pasted into the secret. It is trimmed before use, but the secret is worth re-pasting."
+          fi
+
+          case "$USERNAME" in
+            *@*)
+              echo "::warning title=DOCKERHUB_USERNAME looks like an email address::Docker Hub access tokens authenticate with the account username, not the email you sign in with."
+              ;;
+          esac
 
   # A tag build is a deliberate release of an already-tested commit; a push
   # to main has to earn its image.
@@ -78,11 +97,14 @@ jobs:
 
       - name: Work out the image name
         id: image
+        env:
+          CONFIGURED_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          REPOSITORY="${{ vars.DOCKERHUB_REPOSITORY }}"
+          REPOSITORY="$(printf '%s' "$CONFIGURED_REPOSITORY" | tr -d '[:space:]')"
 
           if [ -z "$REPOSITORY" ]; then
-              REPOSITORY="${{ secrets.DOCKERHUB_USERNAME }}/ribs-recipes"
+              REPOSITORY="$(printf '%s' "$USERNAME" | tr -d '[:space:]')/ribs-recipes"
           fi
 
           echo "name=${REPOSITORY}" >> "$GITHUB_OUTPUT"
@@ -91,11 +113,19 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
 
+      # `docker login` directly rather than docker/login-action, so the values
+      # can be trimmed in-process. A secret pasted with a trailing newline
+      # produces a Basic auth header Docker Hub rejects outright, and the
+      # action has no way to strip it. The token goes in on stdin, so it never
+      # appears in a process list.
       - name: Log in to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN" | tr -d '[:space:]' | docker login \
+            --username "$(printf '%s' "$USERNAME" | tr -d '[:space:]')" \
+            --password-stdin
 
       - name: Work out tags and labels
         id: meta
@@ -172,6 +202,10 @@ jobs:
           check /admin       403
 
           docker rm -f smoke
+
+      - name: Log out
+        if: always()
+        run: docker logout
 
       - name: Summarise
         run: |
