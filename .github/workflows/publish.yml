@@ -101,10 +101,12 @@ jobs:
           CONFIGURED_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
           USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          REPOSITORY="$(printf '%s' "$CONFIGURED_REPOSITORY" | tr -d '[:space:]')"
+          clean() { printf '%s' "$1" | LC_ALL=C tr -cd '[:print:]'; }
+
+          REPOSITORY="$(clean "$CONFIGURED_REPOSITORY")"
 
           if [ -z "$REPOSITORY" ]; then
-              REPOSITORY="$(printf '%s' "$USERNAME" | tr -d '[:space:]')/ribs-recipes"
+              REPOSITORY="$(clean "$USERNAME")/ribs-recipes"
           fi
 
           echo "name=${REPOSITORY}" >> "$GITHUB_OUTPUT"
@@ -113,19 +115,53 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Docker Hub rejects a Basic auth header built from a credential holding
+      # anything outside printable ASCII — a non-breaking space or a zero-width
+      # character picked up while copying, for instance — with the unhelpful
+      # "malformed HTTP Authorization header". This reports the shape of each
+      # secret without ever printing one, so a bad paste is obvious.
+      - name: Inspect the credential format
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          describe() {
+            label="$1"
+            value="$2"
+            pattern="$3"
+
+            if printf '%s' "$value" | LC_ALL=C grep -q '[^[:print:]]'; then
+              ascii='no — contains a character outside printable ASCII'
+            else
+              ascii='yes'
+            fi
+
+            if printf '%s' "$value" | LC_ALL=C grep -qE "$pattern"; then
+              shape='yes'
+            else
+              shape='no'
+            fi
+
+            echo "${label}: printable-ascii-only=${ascii}, matches-expected-shape=${shape}"
+          }
+
+          describe DOCKERHUB_USERNAME "$USERNAME" '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+          describe DOCKERHUB_TOKEN "$TOKEN" '^dckr_pat_[A-Za-z0-9_-]+$'
+
       # `docker login` directly rather than docker/login-action, so the values
-      # can be trimmed in-process. A secret pasted with a trailing newline
-      # produces a Basic auth header Docker Hub rejects outright, and the
-      # action has no way to strip it. The token goes in on stdin, so it never
-      # appears in a process list.
+      # can be cleaned in-process: everything outside printable ASCII is
+      # dropped, which covers a stray newline and the invisible characters a
+      # copy from a web page can carry. Docker Hub usernames and access tokens
+      # are ASCII by construction, so nothing legitimate is lost. The token
+      # goes in on stdin, so it never appears in a process list.
       - name: Log in to Docker Hub
         env:
           USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          printf '%s' "$TOKEN" | tr -d '[:space:]' | docker login \
-            --username "$(printf '%s' "$USERNAME" | tr -d '[:space:]')" \
-            --password-stdin
+          clean() { printf '%s' "$1" | LC_ALL=C tr -cd '[:print:]'; }
+
+          clean "$TOKEN" | docker login --username "$(clean "$USERNAME")" --password-stdin
 
       - name: Work out tags and labels
         id: meta
