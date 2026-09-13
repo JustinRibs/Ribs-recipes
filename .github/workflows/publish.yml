@@ -106,7 +106,7 @@ jobs:
           REPOSITORY="$(clean "$CONFIGURED_REPOSITORY")"
 
           if [ -z "$REPOSITORY" ]; then
-              REPOSITORY="$(clean "$USERNAME")/ribs-recipes"
+              REPOSITORY="$(clean "$USERNAME" | tr 'A-Z' 'a-z')/ribs-recipes"
           fi
 
           echo "name=${REPOSITORY}" >> "$GITHUB_OUTPUT"
@@ -148,6 +148,41 @@ jobs:
           describe DOCKERHUB_USERNAME "$USERNAME" '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
           describe DOCKERHUB_TOKEN "$TOKEN" '^dckr_pat_[A-Za-z0-9_-]+$'
 
+          clean() { printf '%s' "$1" | LC_ALL=C tr -cd '[:print:]'; }
+
+          if clean "$USERNAME" | grep -q '[A-Z]'; then
+            echo "::warning title=DOCKERHUB_USERNAME contains uppercase letters::Docker Hub usernames are lowercase. It is lowercased before use, but the secret is worth correcting."
+          fi
+
+          # Ask Docker Hub directly. `docker login` reports a rejected
+          # credential and a badly built header with the same opaque message,
+          # and this separates the two: a 200 here means the pair is valid and
+          # the problem is local, a 401 means Docker Hub does not accept it.
+          # Only the status code is printed — the response body carries a
+          # bearer token.
+          USER_CLEAN="$(clean "$USERNAME" | tr 'A-Z' 'a-z')"
+          SCOPE="repository:${USER_CLEAN}/ribs-recipes:pull,push"
+
+          STATUS="$(
+            printf 'user = "%s:%s"\n' "$USER_CLEAN" "$(clean "$TOKEN")" |
+              curl -sS --config - -o /dev/null -w '%{http_code}' \
+                "https://auth.docker.io/token?service=registry.docker.io&scope=${SCOPE}"
+          )"
+
+          echo "Docker Hub auth probe: HTTP ${STATUS}"
+
+          case "$STATUS" in
+            200)
+              echo "Docker Hub accepted the credentials."
+              ;;
+            401)
+              echo "::error title=Docker Hub rejected the credentials::The username or the access token is wrong, or the token was not created with Read & Write scope."
+              ;;
+            *)
+              echo "::warning title=Unexpected auth response::Docker Hub answered the probe with HTTP ${STATUS}."
+              ;;
+          esac
+
       # `docker login` directly rather than docker/login-action, so the values
       # can be cleaned in-process: everything outside printable ASCII is
       # dropped, which covers a stray newline and the invisible characters a
@@ -161,7 +196,9 @@ jobs:
         run: |
           clean() { printf '%s' "$1" | LC_ALL=C tr -cd '[:print:]'; }
 
-          clean "$TOKEN" | docker login --username "$(clean "$USERNAME")" --password-stdin
+          clean "$TOKEN" | docker login \
+            --username "$(clean "$USERNAME" | tr 'A-Z' 'a-z')" \
+            --password-stdin
 
       - name: Work out tags and labels
         id: meta
