@@ -318,6 +318,27 @@ RIBS_IMAGE=yourdockerhubuser/ribs-recipes:latest
 docker compose pull && docker compose up -d
 ```
 
+If the Docker Hub repository is **private** — which is the default — the server
+has to authenticate before it can pull. Do it once, with the same access token:
+
+```bash
+docker login -u yourdockerhubuser      # paste the access token as the password
+```
+
+Making the repository public on Docker Hub instead removes that step, at the
+cost of publishing the image itself. Nothing secret is baked into it — no
+`.env`, no database, no photos — so either is reasonable.
+
+### Two things about the credentials
+
+- **The username must be lowercase.** Docker Hub usernames are, and passing an
+  uppercase one makes Hub answer the login with `malformed HTTP Authorization
+header`, which points nowhere near the real problem. The workflow lowercases
+  it and warns, but the secret is worth correcting.
+- **Use an access token, not your password**, and give it Read & Write scope.
+  The workflow checks the pair against Docker Hub before it tries to log in, so
+  a wrong or under-scoped token fails with a sentence that says so.
+
 Leave `RIBS_IMAGE` unset and the stack builds from the checkout as before —
 both routes work, and the scheduler always runs the same image as the app.
 
