@@ -794,9 +794,9 @@ php artisan recipes:reindex   # rebuild, if results ever look stale
 ## Testing
 
 ```bash
-composer run test    # 199 PHP tests
+composer run test    # 200 PHP tests
 npm run test         # 59 front-end unit tests
-npm run test:e2e     # 70 end-to-end tests (WebKit at iPhone size + Chromium)
+npm run test:e2e     # 72 end-to-end tests (WebKit at iPhone size + Chromium)
 npm run check        # types, unit tests, and the PHP suite
 ```
 
