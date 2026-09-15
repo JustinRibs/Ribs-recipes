@@ -1,11 +1,14 @@
 ###############################################################################
 # Ribs Recipes — production stack
 #
-#   Internet → Cloudflare → Cloudflare Tunnel → Traefik → this container
+#   Internet → Cloudflare → Cloudflare Tunnel → this container
 #
-# Nothing here publishes a host port. The only way in is through the existing
-# Traefik instance on its external network, which is exactly the boundary the
-# Cloudflare Tunnel already terminates at.
+# The tunnel runs on the host, so the container publishes one port — bound to
+# 127.0.0.1, never 0.0.0.0. That distinction is the whole security posture of
+# this file: the loopback bind is what keeps the site off the LAN, and
+# cloudflared, running on the same host, is the only thing that can reach it.
+#
+# Point the tunnel's public hostname at http://localhost:${APP_PORT}.
 #
 #   cp .env.example .env      # fill it in (see the README)
 #   docker compose up -d --build
@@ -33,30 +36,16 @@ services:
       # database, uploaded photos, and the logs.
       - ribs-storage:/app/storage
 
+    ports:
+      # 127.0.0.1 is load-bearing. The short form ("8080:80") binds 0.0.0.0 and
+      # puts the site on every device on the network — which would not expose
+      # the admin, since the Cloudflare token is verified rather than inferred
+      # from where a request came from, but would publish the collection to the
+      # LAN. Only cloudflared, on this host, should be able to reach it.
+      - '127.0.0.1:${APP_PORT:-8080}:80'
+
     networks:
-      - traefik
       - internal
-
-    labels:
-      traefik.enable: 'true'
-      # Which of Traefik's networks to route over, when it is attached to
-      # several. Matches the external network named at the bottom.
-      traefik.docker.network: ${TRAEFIK_NETWORK:-traefik}
-
-      traefik.http.routers.ribs-recipes.rule: Host(`${APP_HOST:-recipes.ribarichh.com}`)
-      traefik.http.routers.ribs-recipes.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-      traefik.http.routers.ribs-recipes.service: ribs-recipes
-
-      # TLS is off by default: the Cloudflare Tunnel terminates HTTPS and
-      # speaks plain HTTP to Traefik on the same host. Set
-      # TRAEFIK_TLS=true (and TRAEFIK_ENTRYPOINT=websecure) if Traefik
-      # holds the certificate instead.
-      traefik.http.routers.ribs-recipes.tls: ${TRAEFIK_TLS:-false}
-      traefik.http.routers.ribs-recipes.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-}
-
-      traefik.http.services.ribs-recipes.loadbalancer.server.port: '80'
-      traefik.http.services.ribs-recipes.loadbalancer.healthcheck.path: /up
-      traefik.http.services.ribs-recipes.loadbalancer.healthcheck.interval: 30s
 
     healthcheck:
       test: ['CMD', 'curl', '--fail', '--silent', '--output', '/dev/null', 'http://127.0.0.1/up']
@@ -132,12 +121,7 @@ volumes:
     name: ribs-recipes-storage
 
 networks:
-  # The server's existing Traefik network. This stack joins it; it never
-  # creates or configures Traefik itself.
-  traefik:
-    external: true
-    name: ${TRAEFIK_NETWORK:-traefik}
-
-  # Private link between the app and the scheduler. Nothing else reaches it.
+  # Private link between the app and the scheduler. Nothing else reaches it;
+  # traffic from outside arrives only through the published loopback port.
   internal:
     driver: bridge

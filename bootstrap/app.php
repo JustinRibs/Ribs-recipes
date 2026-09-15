@@ -27,8 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Traffic arrives as Cloudflare -> Tunnel -> Traefik -> this container,
-        // so the proxy headers are what carry the real scheme and client IP.
+        // Traffic arrives as Cloudflare -> Tunnel -> this container, so the
+        // proxy headers are what carry the real scheme and client IP. This
+        // holds for any proxy in front; the application never depends on one.
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
 
         $middleware->web(append: [

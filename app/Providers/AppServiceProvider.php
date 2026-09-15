@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading($this->app->isLocal());
         Model::preventSilentlyDiscardingAttributes($this->app->isLocal());
 
-        // Behind Cloudflare + Traefik the app only ever speaks https publicly.
+        // Behind the Cloudflare Tunnel the app only ever speaks https publicly.
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }

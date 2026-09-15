@@ -103,7 +103,7 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 COPY docker/entrypoint.sh /usr/local/bin/ribs-entrypoint
 RUN chmod +x /usr/local/bin/ribs-entrypoint
 
-# The health endpoint Laravel provides, used by Compose and by Traefik.
+# The health endpoint Laravel provides, used by Compose and by any proxy.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl --fail --silent --output /dev/null http://127.0.0.1/up || exit 1
 

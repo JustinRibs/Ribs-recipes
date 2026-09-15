@@ -1,11 +1,12 @@
 {
-	# TLS is terminated by Cloudflare and the connection from the tunnel to
-	# Traefik stays inside the host, so this server speaks plain HTTP. Traefik
-	# is the only thing that can reach it — no host port is published.
+	# TLS is terminated by Cloudflare and the hop from the tunnel to this
+	# container never leaves the host, so this server speaks plain HTTP. The
+	# published port is bound to 127.0.0.1, so cloudflared is the only thing
+	# that can reach it.
 	auto_https off
 
-	# Trust the proxy chain for client IP and scheme. Traefik is the only
-	# thing that can reach this container; Laravel checks the headers again.
+	# Trust the proxy chain for client IP and scheme. Only cloudflared, on this
+	# host, can reach the container; Laravel checks the headers again.
 	servers {
 		trusted_proxies static private_ranges
 	}

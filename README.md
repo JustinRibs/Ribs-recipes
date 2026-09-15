@@ -16,6 +16,7 @@ Cloudflare Zero Trust Access.
 - [Production deployment](#production-deployment)
 - [Continuous integration and Docker Hub](#continuous-integration-and-docker-hub)
 - [Cloudflare Tunnel](#cloudflare-tunnel)
+- [Putting it behind a reverse proxy](#putting-it-behind-a-reverse-proxy)
 - [Cloudflare Zero Trust Access](#cloudflare-zero-trust-access)
 - [Environment variables](#environment-variables)
 - [Backups](#backups)
@@ -77,10 +78,10 @@ any kind**. Every route that can change data is under `/admin`.
 | Build      | Vite 8                                                         |
 | Database   | SQLite, with FTS5 for search                                   |
 | Runtime    | FrankenPHP (web server and PHP in one process)                 |
-| Proxy      | Your existing Traefik, reached through a Cloudflare Tunnel     |
+| Ingress    | A Cloudflare Tunnel on the host, straight to one loopback port |
 | Admin auth | Cloudflare Zero Trust Access (Google IdP), JWT verified in-app |
 
-No Redis. No queue worker. No second Traefik.
+No Redis. No queue worker. No reverse proxy.
 
 ---
 
@@ -156,9 +157,14 @@ npm run check             # types + unit tests + PHP suite
 
 ## Production deployment
 
-The server already runs Docker Compose and Traefik. This stack **joins** the
-existing Traefik network; it never starts, configures or replaces Traefik, and
-it publishes no host ports.
+The container publishes a single port, bound to `127.0.0.1`, and the Cloudflare
+Tunnel running on the host forwards to it. Nothing else on the network can
+reach the container — which is the point of the loopback bind, and the one
+detail in this file worth reading twice.
+
+If you already run a reverse proxy and would rather put this behind it, nothing
+in the application depends on how traffic arrives; see
+[Putting it behind a reverse proxy](#putting-it-behind-a-reverse-proxy).
 
 ### 1. Put the code on the server
 
@@ -191,27 +197,15 @@ APP_DEBUG=false
 APP_URL=https://recipes.ribarichh.com
 APP_KEY=base64:…
 
-APP_HOST=recipes.ribarichh.com
-TRAEFIK_NETWORK=traefik          # see below
-TRAEFIK_ENTRYPOINT=web
+APP_PORT=8080                    # loopback-only; the tunnel points here
 
 ADMIN_EMAIL=you@gmail.com        # the Google account you sign in with
 CLOUDFLARE_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com
 CLOUDFLARE_ACCESS_AUD=…          # from the Access application
 ```
 
-Find your Traefik network's real name:
-
-```bash
-docker network ls
-```
-
-It is commonly `traefik`, `proxy` or `web`. Set `TRAEFIK_NETWORK` to match, or
-the stack will fail to start with "network not found".
-
-If Traefik terminates TLS itself rather than Cloudflare, set
-`TRAEFIK_ENTRYPOINT=websecure`, `TRAEFIK_TLS=true` and
-`TRAEFIK_CERT_RESOLVER=<your resolver>`.
+`APP_PORT` only has to be free on the host; nothing outside the machine ever
+sees it.
 
 ### 3. Start
 
@@ -351,32 +345,59 @@ run; if the server is a Raspberry Pi or Apple silicon, add the platform in
 
 ## Cloudflare Tunnel
 
-The tunnel terminates the public HTTPS connection and forwards to Traefik on
-the same host. In **Zero Trust → Networks → Tunnels**, add a public hostname to
-your existing tunnel:
+The tunnel terminates the public HTTPS connection and forwards to the
+container's loopback port. In **Zero Trust → Networks → Tunnels**, add a public
+hostname to your existing tunnel:
 
-| Field     | Value                                                             |
-| --------- | ----------------------------------------------------------------- |
-| Subdomain | `recipes`                                                         |
-| Domain    | `ribarichh.com`                                                   |
-| Type      | `HTTP`                                                            |
-| URL       | your Traefik HTTP entrypoint, e.g. `traefik:80` or `localhost:80` |
+| Field     | Value                                 |
+| --------- | ------------------------------------- |
+| Subdomain | `recipes`                             |
+| Domain    | `ribarichh.com`                       |
+| Type      | `HTTP`                                |
+| URL       | `localhost:8080` — matches `APP_PORT` |
 
-If `cloudflared` runs as a container, it must be on the same Docker network as
-Traefik and should use Traefik's service name (`traefik:80`). If it runs on the
-host, use `localhost:80`.
+`HTTP`, not `HTTPS`: the hop from cloudflared to the container never leaves the
+machine, and TLS is already terminated at Cloudflare's edge.
 
-Under **Additional application settings → HTTP Settings**, leave _HTTP Host
-Header_ empty so the original `recipes.ribarichh.com` header reaches Traefik —
-that header is what Traefik's router rule matches on.
+Leave _HTTP Host Header_ empty under **Additional application settings → HTTP
+Settings**. The container answers on any hostname, so there is nothing to
+match, and overriding it would only break the URLs Laravel generates.
+
+Or, in a file-based `cloudflared` config:
+
+```yaml
+ingress:
+  - hostname: recipes.ribarichh.com
+    service: http://localhost:8080
+  - service: http_status:404
+```
 
 Traffic then flows:
 
 ```
-Browser → Cloudflare edge → Cloudflare Tunnel → Traefik → ribs-recipes
+Browser → Cloudflare edge → Cloudflare Tunnel → ribs-recipes
 ```
 
-No port is open on your router, and no host port is published by this stack.
+No port is open on your router, and the one host port that is published answers
+only to `127.0.0.1` — verify with:
+
+```bash
+docker port ribs-recipes          # expect: 80/tcp -> 127.0.0.1:8080
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/up   # 200
+curl --max-time 5 http://<this-server's-LAN-ip>:8080/                # refused
+```
+
+### Putting it behind a reverse proxy
+
+Nothing in the application knows or cares how traffic reaches it — Traefik,
+nginx and Caddy all work, and `TRUSTED_PROXIES=*` already covers the extra hop.
+A proxy earns its keep the moment a second service shares the tunnel, since it
+gives you one hostname per app and one place for TLS.
+
+To do that, drop the `ports:` block from `docker-compose.yml`, attach the `app`
+service to the proxy's network, and point the proxy at `app:80`. Removing the
+published port is the part that matters: a service behind a proxy should not
+also be reachable beside it.
 
 ---
 
@@ -527,9 +548,7 @@ worth knowing:
 | Variable                        | Purpose                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------ |
 | `APP_KEY`                       | Laravel encryption key. Generate once; changing it invalidates sessions. |
-| `APP_HOST`                      | Hostname Traefik routes to this container.                               |
-| `TRAEFIK_NETWORK`               | Name of your **existing** Traefik network.                               |
-| `TRAEFIK_ENTRYPOINT`            | Traefik entrypoint to attach to (`web` behind a tunnel).                 |
+| `APP_PORT`                      | Host port for the container, bound to `127.0.0.1`. The tunnel's target.  |
 | `CLOUDFLARE_ACCESS_TEAM_DOMAIN` | e.g. `yourteam.cloudflareaccess.com`.                                    |
 | `CLOUDFLARE_ACCESS_AUD`         | Application Audience tag from the Access app.                            |
 | `ADMIN_EMAIL`                   | Provisioned as the `owner` user on first sign-in.                        |
@@ -928,7 +947,7 @@ A few decisions worth knowing about:
 - **Quantities are stored twice.** A normalised number for scaling, and the
   author's own wording for display. An unscaled recipe always reads exactly the
   way it was written, and scaling never invents a number for "a pinch".
-- **The admin area is never cached.** Not by Cloudflare, not by Traefik, not by
+- **The admin area is never cached.** Not by Cloudflare, not by any proxy, not by
   the service worker, which refuses to intercept `/admin` at all.
 - **Authorisation runs before route-model binding**, so an unauthenticated
   request to `/admin/recipes/42` is a 403 whether or not recipe 42 exists.
