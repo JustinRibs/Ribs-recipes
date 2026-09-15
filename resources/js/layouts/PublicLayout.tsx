@@ -107,7 +107,7 @@ export function PublicLayout({ children, showCategoryRail = true }: PublicLayout
                 {/* Category rail on small screens, where the nav does not fit. */}
                 {showCategoryRail && navCategories.length > 0 && (
                     <nav aria-label="Categories" className="lg:hidden">
-                        <div className="rail flex gap-2 overflow-x-auto px-[clamp(1rem,4vw,2.5rem)] pb-2.5">
+                        <div className="rail rail-inset flex gap-2 overflow-x-auto pb-2.5">
                             <Link
                                 href="/recipes"
                                 className="flex min-h-10 shrink-0 items-center rounded-full bg-surface-2 px-4 text-[0.85rem] font-medium text-ink-muted transition active:scale-[0.97]"

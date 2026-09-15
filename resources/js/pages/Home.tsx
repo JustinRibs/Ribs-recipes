@@ -121,7 +121,7 @@ export default function Home({ spotlight, sections, categories, totalRecipes }: 
             {/* Category chips — the fastest way into the collection on a phone. */}
             {categories.length > 0 && (
                 <nav aria-label="Browse by category" className="mt-10 sm:mt-14">
-                    <div className="rail flex gap-2.5 overflow-x-auto px-[clamp(1rem,4vw,2.5rem)] pb-1">
+                    <div className="rail rail-inset flex gap-2.5 overflow-x-auto pb-1">
                         {categories.map((category) => (
                             <Link
                                 key={category.id}

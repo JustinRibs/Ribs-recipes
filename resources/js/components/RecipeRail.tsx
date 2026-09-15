@@ -41,7 +41,7 @@ export function RecipeRail({ title, subtitle, href, recipes, priority = false }:
                 </Link>
             </div>
 
-            <div className="rail mt-5 flex gap-4 overflow-x-auto px-[clamp(1rem,4vw,2.5rem)] pb-2 sm:gap-5">
+            <div className="rail rail-inset mt-5 flex gap-4 overflow-x-auto pb-2 sm:gap-5">
                 {recipes.map((recipe, index) => (
                     <RecipeCard
                         key={recipe.id}
@@ -50,9 +50,6 @@ export function RecipeRail({ title, subtitle, href, recipes, priority = false }:
                         priority={priority && index === 0}
                     />
                 ))}
-
-                {/* Trailing spacer so the last card can snap fully into view. */}
-                <span className="w-1 shrink-0" aria-hidden="true" />
             </div>
         </section>
     )

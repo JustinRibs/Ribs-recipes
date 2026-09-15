@@ -32,6 +32,12 @@
 :root {
     color-scheme: light;
 
+    /* Layout measurements. The shell is the centred content column; the gutter
+       is the breathing room inside it. Both live here because the rails need
+       to derive their own inset from them — see `.rail-inset`. */
+    --shell-max: 78rem;
+    --gutter: clamp(1rem, 4vw, 2.5rem);
+
     --c-canvas: #fbfaf7;
     --c-surface: #ffffff;
     --c-surface-2: #f5f3ee;
@@ -275,13 +281,42 @@
 
     /* Fluid gutters that stay comfortable from 320px to ultrawide. */
     .gutter {
-        padding-inline: clamp(1rem, 4vw, 2.5rem);
+        padding-inline: var(--gutter);
     }
 
     .shell {
         margin-inline: auto;
         width: 100%;
-        max-width: 78rem;
+        max-width: var(--shell-max);
+    }
+
+    /*
+     * Aligns a full-bleed horizontal scroller to the shell.
+     *
+     * The rails keep their scrollport edge to edge on purpose — a card should
+     * slide off the side of the screen rather than stop short of it — but the
+     * first card still has to line up with the heading above it, and that
+     * heading sits inside the centred `.shell`. A plain `.gutter` only lines
+     * the two up until the viewport passes `--shell-max`, past which the shell
+     * stops growing and the rail does not, so the cards drift outwards by half
+     * the difference. Adding that half back keeps them in the same column at
+     * any width, and `max()` falls back to the bare gutter on narrow screens
+     * where the difference would be negative.
+     *
+     * The percentage resolves against the containing block, so the element
+     * wrapping a rail has to span the full content width and carry no inline
+     * padding of its own.
+     */
+    .rail-inset {
+        --rail-inset: max(var(--gutter), calc((100% - var(--shell-max)) / 2 + var(--gutter)));
+
+        padding-inline: var(--rail-inset);
+        /*
+         * Snap points are measured from the scrollport edge, not from the
+         * padding edge. Without this, `scroll-snap-type: mandatory` settles the
+         * leading card flush against the edge and swallows the inset entirely.
+         */
+        scroll-padding-inline: var(--rail-inset);
     }
 }
 
