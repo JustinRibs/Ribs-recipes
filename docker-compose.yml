@@ -37,12 +37,16 @@ services:
       - ribs-storage:/app/storage
 
     ports:
-      # 127.0.0.1 is load-bearing. The short form ("8080:80") binds 0.0.0.0 and
-      # puts the site on every device on the network — which would not expose
-      # the admin, since the Cloudflare token is verified rather than inferred
-      # from where a request came from, but would publish the collection to the
-      # LAN. Only cloudflared, on this host, should be able to reach it.
-      - '127.0.0.1:${APP_PORT:-8080}:80'
+      # 127.0.0.1 is load-bearing. The short form ("61080:80") binds 0.0.0.0
+      # and puts the site on every device on the network — which would not
+      # expose the admin, since the Cloudflare token is verified rather than
+      # inferred from where a request came from, but would publish the
+      # collection to the LAN. Only cloudflared, on this host, should reach it.
+      #
+      # 61080 sits above Linux's default ephemeral range (32768–60999), so the
+      # kernel will never hand it to an outbound connection and make a deploy
+      # fail with "port is already allocated".
+      - '127.0.0.1:${APP_PORT:-61080}:80'
 
     networks:
       - internal

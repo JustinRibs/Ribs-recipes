@@ -197,7 +197,7 @@ APP_DEBUG=false
 APP_URL=https://recipes.ribarichh.com
 APP_KEY=base64:…
 
-APP_PORT=8080                    # loopback-only; the tunnel points here
+APP_PORT=61080                   # loopback-only; the tunnel points here
 
 ADMIN_EMAIL=you@gmail.com        # the Google account you sign in with
 CLOUDFLARE_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com
@@ -205,7 +205,15 @@ CLOUDFLARE_ACCESS_AUD=…          # from the Access application
 ```
 
 `APP_PORT` only has to be free on the host; nothing outside the machine ever
-sees it.
+sees it. The default, `61080`, is picked to be one nothing else wants: above
+Linux's default ephemeral range (`32768–60999`, so the kernel will not hand it
+to an outbound connection while the stack is down) and inside IANA's dynamic
+range, where no service is ever registered. Confirm it is free before you
+start:
+
+```bash
+ss -ltnp | grep -w 61080 || echo 'free'
+```
 
 ### 3. Start
 
@@ -349,12 +357,12 @@ The tunnel terminates the public HTTPS connection and forwards to the
 container's loopback port. In **Zero Trust → Networks → Tunnels**, add a public
 hostname to your existing tunnel:
 
-| Field     | Value                                 |
-| --------- | ------------------------------------- |
-| Subdomain | `recipes`                             |
-| Domain    | `ribarichh.com`                       |
-| Type      | `HTTP`                                |
-| URL       | `localhost:8080` — matches `APP_PORT` |
+| Field     | Value                                  |
+| --------- | -------------------------------------- |
+| Subdomain | `recipes`                              |
+| Domain    | `ribarichh.com`                        |
+| Type      | `HTTP`                                 |
+| URL       | `localhost:61080` — matches `APP_PORT` |
 
 `HTTP`, not `HTTPS`: the hop from cloudflared to the container never leaves the
 machine, and TLS is already terminated at Cloudflare's edge.
@@ -368,7 +376,7 @@ Or, in a file-based `cloudflared` config:
 ```yaml
 ingress:
   - hostname: recipes.ribarichh.com
-    service: http://localhost:8080
+    service: http://localhost:61080
   - service: http_status:404
 ```
 
@@ -382,9 +390,9 @@ No port is open on your router, and the one host port that is published answers
 only to `127.0.0.1` — verify with:
 
 ```bash
-docker port ribs-recipes          # expect: 80/tcp -> 127.0.0.1:8080
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/up   # 200
-curl --max-time 5 http://<this-server's-LAN-ip>:8080/                # refused
+docker port ribs-recipes          # expect: 80/tcp -> 127.0.0.1:61080
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:61080/up  # 200
+curl --max-time 5 http://<this-server's-LAN-ip>:61080/               # refused
 ```
 
 ### Putting it behind a reverse proxy
