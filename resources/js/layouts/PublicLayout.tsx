@@ -74,15 +74,19 @@ export function PublicLayout({ children, showCategoryRail = true }: PublicLayout
                     <nav aria-label="Categories" className="ml-auto hidden items-center gap-1 lg:flex">
                         <Link
                             href="/recipes"
-                            className="rounded-full px-3.5 py-2 text-[0.92rem] font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink"
+                            className="whitespace-nowrap rounded-full px-3.5 py-2 text-[0.92rem] font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink"
                         >
                             All recipes
                         </Link>
-                        {navCategories.slice(0, 5).map((category) => (
+                        {navCategories.slice(0, 5).map((category, index) => (
                             <Link
                                 key={category.slug}
                                 href={category.url}
-                                className="rounded-full px-3.5 py-2 text-[0.92rem] font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink"
+                                // The fifth only once there is room for it beside the logo.
+                                className={cn(
+                                    'whitespace-nowrap rounded-full px-3.5 py-2 text-[0.92rem] font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink',
+                                    index >= 4 && 'hidden xl:inline-block',
+                                )}
                             >
                                 {category.name}
                             </Link>
@@ -138,7 +142,7 @@ export function PublicLayout({ children, showCategoryRail = true }: PublicLayout
 
                     <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
                         <div className="max-w-sm">
-                            <Logo />
+                            <Logo variant="stacked" className="-ml-1" />
                             <p className="mt-4 text-[0.92rem] leading-relaxed text-ink-muted">
                                 {site.footerNote ||
                                     'A personal collection of recipes worth cooking again — Adriatic, Mediterranean, and whatever else earns its place.'}

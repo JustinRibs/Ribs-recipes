@@ -1,6 +1,12 @@
 import { router } from '@inertiajs/react'
 import { useCallback } from 'react'
 import { cn } from '@/lib/cn'
+import fullDark from '../../images/brand/logo-full-dark.webp'
+import fullLight from '../../images/brand/logo-full-light.webp'
+import markDark from '../../images/brand/logo-mark-dark.webp'
+import markLight from '../../images/brand/logo-mark-light.webp'
+import wordmarkDark from '../../images/brand/logo-wordmark-dark.webp'
+import wordmarkLight from '../../images/brand/logo-wordmark-light.webp'
 
 /**
  * Taps required, and the longest gap allowed *between* consecutive taps.
@@ -28,6 +34,12 @@ interface LogoProps {
     className?: string
     /** Suppresses the wordmark on very narrow headers. */
     compact?: boolean
+    /**
+     * `inline` lays the illustration beside the wordmark, which is what fits a
+     * 64px header. `stacked` is the logo exactly as drawn, for places with room
+     * to show it — the footer.
+     */
+    variant?: 'inline' | 'stacked'
     href?: string
 }
 
@@ -43,7 +55,7 @@ interface LogoProps {
  * A single tap still goes home, which is what the logo is for, and the whole
  * mechanism is hidden from assistive technology.
  */
-export function Logo({ className, compact = false, href = '/' }: LogoProps) {
+export function Logo({ className, compact = false, href = '/', variant = 'inline' }: LogoProps) {
     const onClick = useCallback(
         (event: React.MouseEvent) => {
             // Ctrl/Cmd-click, middle-click and the rest belong to the browser:
@@ -101,30 +113,79 @@ export function Logo({ className, compact = false, href = '/' }: LogoProps) {
             // `touch-action: manipulation` removes the 300ms double-tap delay,
             // which is what makes four taps feel instant on iOS.
             className={cn(
-                'group inline-flex select-none items-center gap-2.5 rounded-xl py-1 pr-2 [touch-action:manipulation]',
+                'group inline-flex shrink-0 select-none items-center gap-2 rounded-xl py-1 pr-2 [touch-action:manipulation]',
                 'transition-opacity duration-150 hover:opacity-85',
                 className,
             )}
         >
-            <LogoMark className="size-9 shrink-0" />
+            {variant === 'stacked' ? (
+                <ThemedImage
+                    light={fullLight}
+                    dark={fullDark}
+                    width={720}
+                    height={462}
+                    loading="lazy"
+                    className="h-auto w-64"
+                />
+            ) : (
+                <>
+                    <ThemedImage
+                        light={markLight}
+                        dark={markDark}
+                        width={373}
+                        height={192}
+                        className="h-9 w-auto shrink-0 sm:h-10"
+                    />
 
-            {!compact && (
-                <span className="flex flex-col leading-none">
-                    <span className="font-display text-[1.4rem] tracking-[-0.01em] text-brand">
-                        Ribs Recipes
-                    </span>
-                    <span className="mt-1 flex items-center gap-1.5">
-                        <span
-                            className="checker h-[5px] w-[15px] rounded-[1px] opacity-90"
-                            aria-hidden="true"
-                        />
-                        <span className="text-[0.58rem] font-medium uppercase tracking-[0.16em] text-ink-faint">
-                            Good food goes further
+                    {!compact && (
+                        <span className="flex flex-col items-start">
+                            <ThemedImage
+                                light={wordmarkLight}
+                                dark={wordmarkDark}
+                                width={561}
+                                height={80}
+                                className="h-[0.95rem] w-auto sm:h-[1.15rem]"
+                            />
+                            <span className="mt-1 hidden items-center gap-1.5 leading-none sm:flex">
+                                <span
+                                    className="checker h-[5px] w-[15px] rounded-[1px] opacity-90"
+                                    aria-hidden="true"
+                                />
+                                <span className="whitespace-nowrap text-[0.5rem] font-medium uppercase tracking-[0.14em] text-ink-faint">
+                                    Good food goes further
+                                </span>
+                            </span>
                         </span>
-                    </span>
-                </span>
+                    )}
+                </>
             )}
         </a>
+    )
+}
+
+/**
+ * One raster, two inks. The drawn logo is navy on cream, which disappears on
+ * the dark theme, so a second copy has its navy recoloured to the dark theme's
+ * brand ink. Both are in the DOM and CSS shows the right one; `alt` is empty
+ * because the link around them already carries the name.
+ */
+function ThemedImage({
+    light,
+    dark,
+    className,
+    ...rest
+}: { light: string; dark: string } & Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'>) {
+    return (
+        <>
+            <img src={light} alt="" draggable={false} className={cn(className, 'dark:hidden')} {...rest} />
+            <img
+                src={dark}
+                alt=""
+                draggable={false}
+                className={cn(className, 'hidden dark:block')}
+                {...rest}
+            />
+        </>
     )
 }
 
